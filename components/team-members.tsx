@@ -1,17 +1,23 @@
 "use client"
 
-import { useEffect, useState } from "react"
+import { useQuery } from "@tanstack/react-query"
 import { Fingerprint, Globe, Calendar, Users, Hash } from "lucide-react"
+import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer } from "recharts"
+
+const fetchNationData = async () => {
+  const res = await fetch("https://datausa.io/api/data?drilldowns=Nation&measures=Population")
+  const json = await res.json()
+  return json.data
+}
 
 export default function NationCards() {
-  const [nationData, setNationData] = useState([])
+  const { data: nationData = [], isLoading, error } = useQuery({
+    queryKey: ["nationData"],
+    queryFn: fetchNationData,
+  })
 
-  useEffect(() => {
-    fetch("https://datausa.io/api/data?drilldowns=Nation&measures=Population")
-      .then((res) => res.json())
-      .then((data) => setNationData(data.data))
-      .catch((err) => console.error("Error fetching data:", err))
-  }, [])
+  if (isLoading) return <p className="text-center text-xl p-10">Loading...</p>
+  if (error) return <p className="text-center text-red-600">Error fetching data</p>
 
   return (
     <div className="p-6">
@@ -19,8 +25,23 @@ export default function NationCards() {
         Nation Population Data
       </h1>
 
+      {/* 🔍 Graph Section */}
+      <div className="mb-12">
+        <h2 className="text-xl font-semibold text-center mb-4">Population Over Years</h2>
+        <ResponsiveContainer width="100%" height={300}>
+          <LineChart data={[...nationData].reverse()}>
+            <CartesianGrid strokeDasharray="3 3" />
+            <XAxis dataKey="Year" />
+            <YAxis />
+            <Tooltip />
+            <Line type="monotone" dataKey="Population" stroke="#8884d8" strokeWidth={2} />
+          </LineChart>
+        </ResponsiveContainer>
+      </div>
+
+      {/* 🧩 Cards Section */}
       <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-6">
-        {nationData.map((nation, index) => (
+        {nationData.map((nation: { Nation: string; Year: string; Population: number; "ID Nation": string; "Slug Nation": string }, index: number) => (
           <div
             key={index}
             className="bg-white rounded-xl shadow-md p-6 transition hover:scale-[1.02] hover:shadow-lg"
